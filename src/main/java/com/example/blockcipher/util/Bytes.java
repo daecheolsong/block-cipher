@@ -1,6 +1,7 @@
 package com.example.blockcipher.util;
 
 import java.util.Arrays;
+import java.util.stream.IntStream;
 
 /**
  * 바이트 배열 연산 유틸리티입니다.
@@ -10,30 +11,34 @@ public final class Bytes {
     }
 
     /**
-     * 동일 길이 배열의 XOR 결과를 반환합니다.
+     * 두 배열을 같은 인덱스끼리 XOR합니다.
+     *
+     * <p>반복은 IntStream으로 수행합니다.</p>
      */
     public static byte[] xor(byte[] a, byte[] b) {
         if (a.length != b.length) {
             throw new IllegalArgumentException("xor requires arrays of equal length");
         }
         byte[] out = new byte[a.length];
-        for (int i = 0; i < a.length; i++) {
-            out[i] = (byte) (a[i] ^ b[i]);
-        }
+        IntStream.range(0, a.length)
+            .sequential()
+            .forEach(i -> out[i] = (byte) (a[i] ^ b[i]));
         return out;
     }
 
     /**
-     * 배열의 부분 구간을 잘라 새 배열로 반환합니다.
+     * 입력 배열의 일부 구간을 복사해 새 배열로 반환합니다.
      */
     public static byte[] slice(byte[] input, int offset, int length) {
         return Arrays.copyOfRange(input, offset, offset + length);
     }
 
     /**
-     * 빅엔디언 카운터를 1 증가시킵니다.
+     * 빅엔디언 counter 배열을 1 증가시킵니다.
      *
-     * @return 전체 바이트가 0으로 되돌아 wrap되었으면 true
+     * <p>이 로직은 carry 전파가 핵심이므로 Stream보다 일반 반복이 명확합니다.</p>
+     *
+     * @return 전체가 0으로 돌아왔으면 true(overflow wrap), 아니면 false
      */
     public static boolean incrementBigEndian(byte[] counter) {
         for (int i = counter.length - 1; i >= 0; i--) {
@@ -46,7 +51,7 @@ public final class Bytes {
     }
 
     /**
-     * 두 배열을 이어붙입니다.
+     * 두 배열을 앞뒤로 이어붙입니다.
      */
     public static byte[] concat(byte[] a, byte[] b) {
         byte[] out = Arrays.copyOf(a, a.length + b.length);

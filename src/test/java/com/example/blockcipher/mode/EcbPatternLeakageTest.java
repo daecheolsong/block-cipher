@@ -9,11 +9,11 @@ import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 
 /**
- * ECB의 패턴 노출 특성과 CBC의 체이닝 특성을 비교 검증하는 테스트입니다.
+ * ECB의 패턴 노출 특성과 CBC의 체이닝 특성을 비교하는 테스트입니다.
  */
 class EcbPatternLeakageTest {
     /**
-     * 동일한 평문 블록 2개는 ECB에서 동일한 암호문 블록 2개를 생성합니다.
+     * 동일한 평문 블록은 ECB에서 동일한 암호문 블록으로 변환됩니다.
      */
     @Test
     void identicalPlainBlocksProduceIdenticalCipherBlocksInEcb() {
@@ -34,7 +34,7 @@ class EcbPatternLeakageTest {
     }
 
     /**
-     * 동일한 평문 블록 2개라도 CBC에서는 일반적으로 서로 다른 암호문 블록이 생성됩니다.
+     * 동일한 평문 블록이라도 CBC에서는 보통 서로 다른 암호문 블록이 생성됩니다.
      */
     @Test
     void identicalPlainBlocksDoNotMatchInCbc() {

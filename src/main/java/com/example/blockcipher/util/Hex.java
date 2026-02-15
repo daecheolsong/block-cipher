@@ -1,7 +1,9 @@
 package com.example.blockcipher.util;
 
+import java.util.stream.IntStream;
+
 /**
- * Hex 인코딩/디코딩 유틸리티입니다.
+ * Hex 문자열 인코딩/디코딩 유틸리티입니다.
  */
 public final class Hex {
     private static final char[] HEX = "0123456789abcdef".toCharArray();
@@ -10,21 +12,26 @@ public final class Hex {
     }
 
     /**
-     * 바이트 배열을 소문자 hex 문자열로 변환합니다.
+     * 바이트 배열을 16진수 문자열로 변환합니다.
+     *
+     * <p>반복 처리는 IntStream으로 수행합니다.</p>
      */
     public static String encode(byte[] bytes) {
-        StringBuilder sb = new StringBuilder(bytes.length * 2);
-        for (byte b : bytes) {
-            int v = b & 0xFF;
-            sb.append(HEX[v >>> 4]);
-            sb.append(HEX[v & 0x0F]);
-        }
-        return sb.toString();
+        char[] out = new char[bytes.length * 2];
+        IntStream.range(0, bytes.length)
+            .sequential()
+            .forEach(i -> {
+                int v = bytes[i] & 0xFF;
+                out[i * 2] = HEX[v >>> 4];
+                out[(i * 2) + 1] = HEX[v & 0x0F];
+            });
+        return new String(out);
     }
 
     /**
-     * hex 문자열을 바이트 배열로 변환합니다.
-     * 공백 문자는 무시합니다.
+     * 16진수 문자열을 바이트 배열로 변환합니다.
+     *
+     * <p>문자열의 공백은 제거한 뒤 처리합니다.</p>
      */
     public static byte[] decode(String hex) {
         if (hex == null) {
@@ -39,16 +46,19 @@ public final class Hex {
         }
 
         byte[] out = new byte[normalized.length() / 2];
-        for (int i = 0; i < normalized.length(); i += 2) {
-            int high = toNibble(normalized.charAt(i));
-            int low = toNibble(normalized.charAt(i + 1));
-            out[i / 2] = (byte) ((high << 4) | low);
-        }
+        IntStream.range(0, out.length)
+            .sequential()
+            .forEach(i -> {
+                int index = i * 2;
+                int high = toNibble(normalized.charAt(index));
+                int low = toNibble(normalized.charAt(index + 1));
+                out[i] = (byte) ((high << 4) | low);
+            });
         return out;
     }
 
     /**
-     * hex 문자 1개를 0~15 정수값으로 변환합니다.
+     * hex 문자 한 개를 0~15 값으로 변환합니다.
      */
     private static int toNibble(char c) {
         if ('0' <= c && c <= '9') {

@@ -2,25 +2,25 @@ package com.example.blockcipher.mode;
 
 import com.example.blockcipher.core.BlockCipher;
 import com.example.blockcipher.padding.PaddingScheme;
-import com.example.blockcipher.util.Bytes;
 
 /**
- * ECB(Electronic Codebook) 모드 구현입니다.
+ * ECB 모드 구현입니다.
  *
- * <p>NIST SP 800-38A, Section 6.1의 정의:
- * <pre>
- * C_j = E_k(P_j),  j = 1..n
- * P_j = D_k(C_j),  j = 1..n
- * </pre>
- * 각 블록이 독립적으로 처리되므로 동일한 평문 블록은 동일한 암호문 블록을 만듭니다.
- * 본 구현은 실습 편의를 위해 PKCS#7 패딩을 적용합니다.</p>
+ * <p>수식은 다음과 같습니다.</p>
+ * <p>{@code C_i = E_k(P_i)}</p>
+ * <p>{@code P_i = D_k(C_i)}</p>
+ *
+ * <p>각 블록이 독립적으로 처리되기 때문에,
+ * 같은 평문 블록은 항상 같은 암호문 블록으로 변환됩니다.
+ * 본 구현은 평문 입력에 PKCS#7 패딩을 적용합니다.</p>
  */
 public final class ECBMode extends AbstractMode {
+    /** ECB에서 사용할 패딩 정책(PKCS#7 등). */
     private final PaddingScheme padding;
 
     /**
-     * @param cipher 단일 블록 암호 원시함수
-     * @param padding 패딩 스킴(PKCS#7 권장)
+     * @param cipher 단일 블록 암호 함수
+     * @param padding 평문 길이 정렬용 패딩 정책
      */
     public ECBMode(BlockCipher cipher, PaddingScheme padding) {
         super(cipher);
@@ -32,13 +32,21 @@ public final class ECBMode extends AbstractMode {
         return ModeType.ECB;
     }
 
+    /**
+     * ECB는 IV/nonce를 사용하지 않습니다.
+     */
     @Override
     public int ivLength() {
         return 0;
     }
 
     /**
-     * ECB는 IV/nonce를 사용하지 않습니다.
+     * 평문을 ECB 규칙으로 암호화합니다.
+     *
+     * <p>처리 순서</p>
+     * <p>1. IV 전달이 없는지 확인</p>
+     * <p>2. 패딩 적용</p>
+     * <p>3. 각 블록을 독립적으로 {@code E_k} 처리</p>
      */
     @Override
     public byte[] encrypt(byte[] plaintext, byte[] ivOrNonce) {
@@ -46,32 +54,23 @@ public final class ECBMode extends AbstractMode {
             throw new IllegalArgumentException("ECB does not use IV/nonce");
         }
         byte[] padded = padding.pad(plaintext, cipher.blockSize());
-        byte[] out = new byte[padded.length];
-        int blockSize = cipher.blockSize();
-        for (int offset = 0; offset < padded.length; offset += blockSize) {
-            byte[] block = Bytes.slice(padded, offset, blockSize);
-            byte[] encrypted = cipher.encryptBlock(block);
-            System.arraycopy(encrypted, 0, out, offset, blockSize);
-        }
-        return out;
+        return mapFullBlocks(padded, (block, blockIndex) -> cipher.encryptBlock(block));
     }
 
     /**
-     * ECB는 IV/nonce를 사용하지 않습니다.
+     * 암호문을 ECB 규칙으로 복호화합니다.
+     *
+     * <p>처리 순서</p>
+     * <p>1. IV 전달이 없는지 확인</p>
+     * <p>2. 각 블록을 독립적으로 {@code D_k} 처리</p>
+     * <p>3. 패딩 제거</p>
      */
     @Override
     public byte[] decrypt(byte[] ciphertext, byte[] ivOrNonce) {
         if (ivOrNonce != null && ivOrNonce.length > 0) {
             throw new IllegalArgumentException("ECB does not use IV/nonce");
         }
-        requireMultipleBlockLength(ciphertext);
-        byte[] out = new byte[ciphertext.length];
-        int blockSize = cipher.blockSize();
-        for (int offset = 0; offset < ciphertext.length; offset += blockSize) {
-            byte[] block = Bytes.slice(ciphertext, offset, blockSize);
-            byte[] decrypted = cipher.decryptBlock(block);
-            System.arraycopy(decrypted, 0, out, offset, blockSize);
-        }
-        return padding.unpad(out, blockSize);
+        byte[] paddedPlain = mapFullBlocks(ciphertext, (block, blockIndex) -> cipher.decryptBlock(block));
+        return padding.unpad(paddedPlain, cipher.blockSize());
     }
 }

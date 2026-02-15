@@ -6,23 +6,23 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
 /**
- * AES 단일 블록 연산 구현체입니다.
+ * AES를 단일 블록 연산 형태로 감싼 구현체입니다.
  *
- * <p>주의: 여기서 사용하는 {@code AES/ECB/NoPadding}은
- * "운영 모드 ECB를 쓰겠다"는 뜻이 아니라, 블록 암호 원시함수 {@code E_k}/{@code D_k}
- * 를 얻기 위한 JCA 엔진 설정입니다.
- * 실제 운영 모드(ECB/CBC/CFB/OFB/CTR) 규칙은 상위 {@code mode} 패키지에서 구현합니다.</p>
+ * <p>중요한 점은 {@code AES/ECB/NoPadding} 설정이 "운영 모드로 ECB를 쓰겠다"는 의미가 아니라,
+ * JCA에서 블록 암호 원시 함수 {@code E_k(·)} / {@code D_k(·)}를 얻기 위한 내부 설정이라는 점입니다.
+ * 운영 모드(ECB/CBC/CFB/OFB/CTR)의 체이닝 규칙은 mode 패키지에서 별도로 수행합니다.</p>
  */
 public final class AesBlockCipher implements BlockCipher {
-    /** AES 고정 블록 크기 = 16바이트(128비트). */
+    /** AES는 항상 16바이트 블록을 사용합니다. */
     public static final int AES_BLOCK_SIZE = 16;
 
+    /** 복사 보관된 비밀키 객체입니다. */
     private final SecretKeySpec secretKey;
 
     /**
-     * AES 키를 초기화합니다.
+     * AES 키로 객체를 생성합니다.
      *
-     * @param key 16/24/32바이트(AES-128/192/256) 키
+     * @param key 16/24/32바이트 키(AES-128/192/256)
      */
     public AesBlockCipher(byte[] key) {
         if (key == null) {
@@ -39,18 +39,27 @@ public final class AesBlockCipher implements BlockCipher {
         return AES_BLOCK_SIZE;
     }
 
+    /**
+     * 한 블록을 AES로 암호화합니다.
+     */
     @Override
     public byte[] encryptBlock(byte[] plaintextBlock) {
         return runCipher(plaintextBlock, Cipher.ENCRYPT_MODE);
     }
 
+    /**
+     * 한 블록을 AES로 복호화합니다.
+     */
     @Override
     public byte[] decryptBlock(byte[] ciphertextBlock) {
         return runCipher(ciphertextBlock, Cipher.DECRYPT_MODE);
     }
 
     /**
-     * 내부 공통 단일 블록 연산입니다.
+     * 공통 블록 연산 함수입니다.
+     *
+     * <p>입력 길이를 검증한 뒤 JCA Cipher를 생성/초기화/실행합니다.
+     * 보안 예외는 프로젝트 전용 {@link CryptoException}으로 감싸서 상위에서 일관되게 처리하게 합니다.</p>
      */
     private byte[] runCipher(byte[] input, int mode) {
         if (input == null || input.length != AES_BLOCK_SIZE) {

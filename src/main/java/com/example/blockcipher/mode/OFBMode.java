@@ -1,26 +1,23 @@
 package com.example.blockcipher.mode;
 
 import com.example.blockcipher.core.BlockCipher;
+import com.example.blockcipher.util.Bytes;
 import java.util.Arrays;
 
 /**
- * OFB(Output Feedback) 모드 구현입니다.
+ * OFB 모드 구현입니다.
  *
- * <p>NIST SP 800-38A, Section 6.4의 정의:
- * <pre>
- * I_1 = IV
- * O_j = E_k(I_j)
- * I_j = O_{j-1} (j >= 2)
- * C_j = P_j xor O_j
- * P_j = C_j xor O_j
- * </pre>
+ * <p>{@code I_1 = IV}</p>
+ * <p>{@code O_i = E_k(I_i)}</p>
+ * <p>{@code I_{i+1} = O_i}</p>
+ * <p>{@code C_i = P_i xor O_i}</p>
+ * <p>{@code P_i = C_i xor O_i}</p>
  *
- * OFB는 암/복호화가 동일한 keystream XOR로 동작합니다.
- * 단, 같은 키에서 IV(초기 상태)를 재사용하면 keystream이 재사용되므로 금지해야 합니다.</p>
+ * <p>암호화/복호화 모두 같은 keystream XOR 함수를 사용합니다.</p>
  */
 public final class OFBMode extends AbstractMode {
     /**
-     * @param cipher 단일 블록 암호 원시함수
+     * @param cipher 단일 블록 암호 함수
      */
     public OFBMode(BlockCipher cipher) {
         super(cipher);
@@ -32,7 +29,7 @@ public final class OFBMode extends AbstractMode {
     }
 
     /**
-     * OFB 암호화(keystream XOR).
+     * OFB 암호화를 수행합니다.
      */
     @Override
     public byte[] encrypt(byte[] plaintext, byte[] ivOrNonce) {
@@ -41,7 +38,9 @@ public final class OFBMode extends AbstractMode {
     }
 
     /**
-     * OFB 복호화(암호화와 동일 함수).
+     * OFB 복호화를 수행합니다.
+     *
+     * <p>암호화와 동일한 함수로 처리됩니다.</p>
      */
     @Override
     public byte[] decrypt(byte[] ciphertext, byte[] ivOrNonce) {
@@ -50,20 +49,22 @@ public final class OFBMode extends AbstractMode {
     }
 
     /**
-     * 내부 공통 keystream 적용 로직.
+     * 입력 데이터에 OFB keystream을 XOR하는 공통 함수입니다.
+     *
+     * <p>각 청크마다</p>
+     * <p>1. feedback을 암호화해서 다음 keystream 블록 생성</p>
+     * <p>2. 입력 청크와 XOR</p>
      */
     private byte[] applyKeystream(byte[] input, byte[] ivOrNonce) {
         int blockSize = cipher.blockSize();
-        byte[] out = new byte[input.length];
-        byte[] feedback = Arrays.copyOf(ivOrNonce, ivOrNonce.length);
+        byte[][] feedback = {Arrays.copyOf(ivOrNonce, ivOrNonce.length)};
 
-        for (int offset = 0; offset < input.length; offset += blockSize) {
-            feedback = cipher.encryptBlock(feedback);
-            int chunk = Math.min(blockSize, input.length - offset);
-            for (int i = 0; i < chunk; i++) {
-                out[offset + i] = (byte) (input[offset + i] ^ feedback[i]);
-            }
-        }
-        return out;
+        return mapChunks(input, blockSize, (chunk, chunkIndex) -> {
+            // 이전 내부 상태를 암호화해 다음 keystream 블록을 생성합니다.
+            feedback[0] = cipher.encryptBlock(feedback[0]);
+            byte[] streamChunk = Bytes.slice(feedback[0], 0, chunk.length);
+            // 입력과 keystream을 XOR하면 암호화/복호화 결과가 됩니다.
+            return Bytes.xor(chunk, streamChunk);
+        });
     }
 }

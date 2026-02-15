@@ -1,39 +1,41 @@
 package com.example.blockcipher.mode;
 
 /**
- * 블록 암호 운영 모드 공통 인터페이스입니다.
+ * 블록 암호 운영 모드의 공통 동작을 정의합니다.
  *
- * <p>입력/출력 길이 규칙:
- * <ul>
- *   <li>ECB/CBC: 내부적으로 PKCS#7 패딩을 적용하므로 평문 길이 제약이 없습니다.</li>
- *   <li>CFB/OFB/CTR: 스트림처럼 동작하여 임의 길이를 처리합니다.</li>
- * </ul>
- * </p>
+ * <p>모드 구현체는 다음 책임을 가집니다.</p>
+ * <p>1. 필요한 IV/nonce 길이를 명확히 제공한다.</p>
+ * <p>2. 모드 규칙에 맞춰 암호화/복호화를 수행한다.</p>
+ * <p>3. 잘못된 입력 길이나 IV 길이를 즉시 검증한다.</p>
  */
 public interface ModeOfOperation {
-    /** 모드 식별자(ECB/CBC/CFB/OFB/CTR). */
+    /**
+     * 구현체의 모드 종류를 반환합니다.
+     */
     ModeType type();
 
     /**
-     * 필요한 IV/nonce 길이(바이트). ECB는 0을 반환합니다.
+     * 필요한 IV/nonce 길이를 바이트 단위로 반환합니다.
+     *
+     * <p>예: AES 기반 CBC/CFB/OFB/CTR는 16바이트, ECB는 0바이트.</p>
      */
     int ivLength();
 
     /**
-     * 평문을 암호화합니다.
+     * 평문을 암호문으로 변환합니다.
      *
      * @param plaintext 입력 평문
-     * @param ivOrNonce 모드별 IV/nonce (ECB는 빈 배열 또는 null)
+     * @param ivOrNonce 모드에서 사용할 IV/nonce
      * @return 암호문
      */
     byte[] encrypt(byte[] plaintext, byte[] ivOrNonce);
 
     /**
-     * 암호문을 복호화합니다.
+     * 암호문을 평문으로 복원합니다.
      *
      * @param ciphertext 입력 암호문
-     * @param ivOrNonce 모드별 IV/nonce (ECB는 빈 배열 또는 null)
-     * @return 평문
+     * @param ivOrNonce 모드에서 사용할 IV/nonce
+     * @return 복호화된 평문
      */
     byte[] decrypt(byte[] ciphertext, byte[] ivOrNonce);
 }

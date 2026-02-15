@@ -8,12 +8,11 @@ import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 
 /**
- * CTR에서 nonce/counter 블록을 재사용하면 발생하는 XOR 누출을 재현하는 테스트입니다.
+ * CTR에서 같은 nonce/counter 블록을 재사용할 때 발생하는 위험을 재현합니다.
  */
 class CtrNonceReuseRiskTest {
     /**
-     * 같은 키/nonce를 재사용하면
-     * {@code C1 xor C2 = P1 xor P2} 관계가 성립함을 확인합니다.
+     * 동일 키/nonce 재사용 시 {@code C1 xor C2 = P1 xor P2}가 성립함을 확인합니다.
      */
     @Test
     void reusingSameNonceLeaksXorRelation() {

@@ -10,17 +10,20 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 
 /**
- * 간단한 실행 데모입니다.
- *
- * <p>랜덤 AES 키를 만든 뒤 CTR 모드로 암호화/복호화를 수행하고,
- * 결과를 hex/문자열로 출력합니다.</p>
+ * 프로젝트 동작을 빠르게 확인하기 위한 콘솔 데모 프로그램입니다.
  */
 public final class DemoApplication {
     private DemoApplication() {
     }
 
     /**
-     * 데모 엔트리포인트.
+     * 실행 순서
+     *
+     * <p>1. 랜덤 AES 키 생성</p>
+     * <p>2. CTR 모드 인스턴스 생성</p>
+     * <p>3. 평문 암호화</p>
+     * <p>4. 다시 복호화</p>
+     * <p>5. 결과 출력</p>
      */
     public static void main(String[] args) {
         byte[] key = new byte[16];

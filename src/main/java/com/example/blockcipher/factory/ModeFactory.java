@@ -10,32 +10,58 @@ import com.example.blockcipher.mode.ModeType;
 import com.example.blockcipher.mode.OFBMode;
 import com.example.blockcipher.padding.PaddingScheme;
 import com.example.blockcipher.padding.Pkcs7Padding;
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
 
 /**
- * 모드 구현체 생성 팩토리입니다.
+ * 모드 구현체를 생성하는 팩토리입니다.
  *
- * <p>ECB/CBC에는 PKCS#7 패딩을 주입하고,
- * CFB/OFB/CTR는 스트림 유사 동작이라 별도 패딩 없이 생성합니다.</p>
+ * <p>모드 타입별 생성 함수를 표(Map)로 보관해 두고,
+ * 호출 시 해당 생성 함수를 꺼내 실행하는 방식으로 동작합니다.</p>
  */
 public final class ModeFactory {
+    /** ECB/CBC에서 공통으로 사용할 PKCS#7 패딩 인스턴스. */
+    private static final PaddingScheme PKCS7 = new Pkcs7Padding();
+
+    /** 모드 타입 -> 생성 함수 매핑 표. */
+    private static final Map<ModeType, Function<BlockCipher, ModeOfOperation>> BUILDERS = createBuilders();
+
     private ModeFactory() {
     }
 
     /**
-     * 요청된 모드 타입에 맞는 구현체를 생성합니다.
+     * 지정된 모드 타입에 맞는 구현체를 생성합니다.
      *
-     * @param type 모드 타입
-     * @param cipher 단일 블록 암호 원시함수
+     * @param type 생성할 모드 타입
+     * @param cipher 사용할 블록 암호 구현체(AES 등)
      * @return 모드 구현체
      */
     public static ModeOfOperation create(ModeType type, BlockCipher cipher) {
-        PaddingScheme pkcs7 = new Pkcs7Padding();
-        return switch (type) {
-            case ECB -> new ECBMode(cipher, pkcs7);
-            case CBC -> new CBCMode(cipher, pkcs7);
-            case CFB -> new CFBMode(cipher);
-            case OFB -> new OFBMode(cipher);
-            case CTR -> new CTRMode(cipher);
-        };
+        Objects.requireNonNull(type, "type must not be null");
+        Objects.requireNonNull(cipher, "cipher must not be null");
+
+        Function<BlockCipher, ModeOfOperation> builder = BUILDERS.get(type);
+        if (builder == null) {
+            throw new IllegalArgumentException("unsupported mode type: " + type);
+        }
+        return builder.apply(cipher);
+    }
+
+    /**
+     * 모드 타입별 생성 함수를 등록합니다.
+     *
+     * <p>ECB/CBC는 패딩이 필요하므로 PKCS7을 주입하고,
+     * CFB/OFB/CTR는 패딩 없이 생성합니다.</p>
+     */
+    private static Map<ModeType, Function<BlockCipher, ModeOfOperation>> createBuilders() {
+        EnumMap<ModeType, Function<BlockCipher, ModeOfOperation>> map = new EnumMap<>(ModeType.class);
+        map.put(ModeType.ECB, cipher -> new ECBMode(cipher, PKCS7));
+        map.put(ModeType.CBC, cipher -> new CBCMode(cipher, PKCS7));
+        map.put(ModeType.CFB, CFBMode::new);
+        map.put(ModeType.OFB, OFBMode::new);
+        map.put(ModeType.CTR, CTRMode::new);
+        return Map.copyOf(map);
     }
 }
