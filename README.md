@@ -34,19 +34,6 @@ src/main/java/com/example/blockcipher
 `- DemoApplication.java
 ```
 
-## Swing Visualizer
-
-- Main class: `com.example.blockcipher.visualizer.ui.VisualizerApplication`
-- Features:
-  - Mode/direction selection
-  - Key/IV input validation
-  - Full trace table (`XOR`, `E_k`, `D_k`, feedback, counter)
-  - Color-coded step table by operation type
-  - Step inspector (hex + UTF-8 + note context)
-  - Mode-specific flow diagrams (ECB/CBC/CFB/OFB/CTR)
-  - Step progress timeline
-  - Byte-strip visualization for left/right/result values
-  - Playback controls (`Prev/Next/Play/Stop`, speed slider)
 
 ## Tests
 
